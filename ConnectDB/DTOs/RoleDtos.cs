@@ -2,28 +2,27 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ConnectDB.DTOs;
 
-// ===== CATEGORY DTOs =====
-public class CategoryCreateDto
+public class RoleCreateDto
 {
     [Required]
-    [StringLength(100)]
+    [StringLength(50)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500)]
+    [StringLength(255)]
     public string? Description { get; set; }
 }
 
-public class CategoryUpdateDto
+public class RoleUpdateDto
 {
     [Required]
-    [StringLength(100)]
+    [StringLength(50)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500)]
+    [StringLength(255)]
     public string? Description { get; set; }
 }
 
-public class CategoryResponseDto
+public class RoleResponseDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;

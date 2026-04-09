@@ -2,19 +2,18 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ConnectDB.DTOs;
 
-// ===== USER DTOs =====
-public class UserRegisterDto
+public class AccountRegisterDto
 {
     [Required]
     [StringLength(50)]
     public string Username { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(200)]
+    [StringLength(255)]
     public string Password { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(100)]
+    [StringLength(120)]
     public string FullName { get; set; } = string.Empty;
 
     [StringLength(100)]
@@ -23,23 +22,24 @@ public class UserRegisterDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
-    [StringLength(500)]
-    public string? Address { get; set; }
+    public int? RoleId { get; set; }
 }
 
-public class UserLoginDto
+public class AccountLoginDto
 {
     [Required]
+    [StringLength(50)]
     public string Username { get; set; } = string.Empty;
 
     [Required]
+    [StringLength(255)]
     public string Password { get; set; } = string.Empty;
 }
 
-public class UserUpdateDto
+public class AccountUpdateDto
 {
     [Required]
-    [StringLength(100)]
+    [StringLength(120)]
     public string FullName { get; set; } = string.Empty;
 
     [StringLength(100)]
@@ -48,19 +48,20 @@ public class UserUpdateDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
-    [StringLength(500)]
-    public string? Address { get; set; }
+    public int RoleId { get; set; }
+
+    public bool IsActive { get; set; }
 }
 
-public class UserResponseDto
+public class AccountResponseDto
 {
     public int Id { get; set; }
     public string Username { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Phone { get; set; }
-    public string? Address { get; set; }
-    public string Role { get; set; } = string.Empty;
+    public int RoleId { get; set; }
+    public string RoleName { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
-    // Không trả Password ra ngoài!
 }

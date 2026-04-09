@@ -1,6 +1,41 @@
 @ConnectDB_HostAddress = http://localhost:5181
 
-GET {{ConnectDB_HostAddress}}/weatherforecast/
+### Dashboard
+GET {{ConnectDB_HostAddress}}/api/reports/dashboard
 Accept: application/json
 
-###
+### Create member
+POST {{ConnectDB_HostAddress}}/api/members
+Content-Type: application/json
+
+{
+  "memberCode": "MB001",
+  "fullName": "Nguyen Van A",
+  "dateOfBirth": "2001-10-10",
+  "gender": "Male",
+  "phone": "0900000001",
+  "email": "a@gmail.com",
+  "address": "HCM"
+}
+
+### Create membership package
+POST {{ConnectDB_HostAddress}}/api/membershippackages
+Content-Type: application/json
+
+{
+  "packageCode": "PK001",
+  "name": "Goi 1 thang",
+  "description": "Tap khong gioi han",
+  "durationDays": 30,
+  "price": 500000
+}
+
+### Create subscription
+POST {{ConnectDB_HostAddress}}/api/subscriptions
+Content-Type: application/json
+
+{
+  "memberId": 1,
+  "membershipPackageId": 1,
+  "startDate": "2026-04-08"
+}

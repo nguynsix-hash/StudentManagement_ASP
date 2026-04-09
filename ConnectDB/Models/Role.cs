@@ -2,17 +2,17 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ConnectDB.Models;
 
-public class Category
+public class Role
 {
     [Key]
     public int Id { get; set; }
 
     [Required]
-    [StringLength(100)]
+    [StringLength(50)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500)]
+    [StringLength(255)]
     public string? Description { get; set; }
 
-    public ICollection<Product> Products { get; set; } = new List<Product>();
+    public ICollection<Account> Accounts { get; set; } = new List<Account>();
 }
