@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gym-management-api
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: USE_INMEMORY_DB
+        value: "true"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: "Production"

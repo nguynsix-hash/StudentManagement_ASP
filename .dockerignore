@@ -1,0 +1,10 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/publish
+**/.gitignore
+**/node_modules
+**/*.md
+**/*.docx
+*.tmp
