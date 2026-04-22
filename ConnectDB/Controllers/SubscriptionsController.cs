@@ -20,14 +20,14 @@ public class SubscriptionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SubscriptionResponseDto>>> GetSubscriptions()
     {
-        var subscriptions = await _context.Subscriptions
+        var items = await _context.Subscriptions
             .Include(s => s.Member)
             .Include(s => s.MembershipPackage)
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => MapToResponse(s))
             .ToListAsync();
 
-        return Ok(subscriptions);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]
@@ -55,7 +55,7 @@ public class SubscriptionsController : ControllerBase
             return NotFound(new { message = "Member not found." });
         }
 
-        var subscriptions = await _context.Subscriptions
+        var items = await _context.Subscriptions
             .Include(s => s.Member)
             .Include(s => s.MembershipPackage)
             .Where(s => s.MemberId == memberId)
@@ -63,7 +63,7 @@ public class SubscriptionsController : ControllerBase
             .Select(s => MapToResponse(s))
             .ToListAsync();
 
-        return Ok(subscriptions);
+        return Ok(items);
     }
 
     [HttpPost]

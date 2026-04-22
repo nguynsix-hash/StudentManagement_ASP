@@ -37,12 +37,12 @@ public class AttendancesController : ControllerBase
             query = query.Where(a => a.MemberId == memberId.Value);
         }
 
-        var attendances = await query
+        var items = await query
             .OrderByDescending(a => a.RecordedAt)
             .Select(a => MapToResponse(a))
             .ToListAsync();
 
-        return Ok(attendances);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]
@@ -70,7 +70,7 @@ public class AttendancesController : ControllerBase
             return NotFound(new { message = "Schedule not found." });
         }
 
-        var attendances = await _context.Attendances
+        var items = await _context.Attendances
             .Include(a => a.Schedule)
             .Include(a => a.Member)
             .Where(a => a.ScheduleId == scheduleId)
@@ -78,7 +78,7 @@ public class AttendancesController : ControllerBase
             .Select(a => MapToResponse(a))
             .ToListAsync();
 
-        return Ok(attendances);
+        return Ok(items);
     }
 
     [HttpGet("member/{memberId}/history")]
@@ -90,7 +90,7 @@ public class AttendancesController : ControllerBase
             return NotFound(new { message = "Member not found." });
         }
 
-        var attendances = await _context.Attendances
+        var items = await _context.Attendances
             .Include(a => a.Schedule)
             .Include(a => a.Member)
             .Where(a => a.MemberId == memberId)
@@ -99,7 +99,7 @@ public class AttendancesController : ControllerBase
             .Select(a => MapToResponse(a))
             .ToListAsync();
 
-        return Ok(attendances);
+        return Ok(items);
     }
 
     [HttpPost("mark")]

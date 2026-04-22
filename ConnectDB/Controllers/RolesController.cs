@@ -20,7 +20,7 @@ public class RolesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RoleResponseDto>>> GetRoles()
     {
-        var roles = await _context.Roles
+        var items = await _context.Roles
             .OrderBy(r => r.Name)
             .Select(r => new RoleResponseDto
             {
@@ -30,7 +30,7 @@ public class RolesController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(roles);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]

@@ -3,7 +3,7 @@ import { fieldMeta, modules, navItems } from './modules'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
-const AUTH_KEY = 'gym_admin_auth'
+const AUTH_USER_KEY = 'gym_admin_user'
 
 function api(path) {
   return `${API_BASE}${path}`
@@ -18,6 +18,7 @@ async function callApi(path, { method = 'GET', body } = {}) {
     },
     body: body ? JSON.stringify(body) : undefined,
   })
+
   const txt = await res.text()
   let data = null
   if (txt) {
@@ -27,25 +28,24 @@ async function callApi(path, { method = 'GET', body } = {}) {
       data = txt
     }
   }
+
   if (!res.ok) {
-    let msg = `Yêu cầu thất bại (${res.status})`
+    let msg = `Yeu cau that bai (${res.status})`
     if (data && typeof data === 'object') {
       if (data.message) {
         msg = data.message
       } else if (data.errors && typeof data.errors === 'object') {
         const firstError = Object.values(data.errors).flat().find(Boolean)
-        if (typeof firstError === 'string') {
-          msg = firstError
-        }
+        if (typeof firstError === 'string') msg = firstError
       } else if (data.title) {
         msg = data.title
       }
     }
     throw new Error(msg)
   }
+
   return data
 }
-
 function fmt(v, t) {
   if (v === undefined || v === null || v === '') return '-'
   if (t === 'boolean') return v ? 'Có' : 'Không'
@@ -117,18 +117,29 @@ function emptyFilters() {
   return out
 }
 
-function readStoredAuth() {
+
+
+function asItems(res) {
+  if (Array.isArray(res)) return res
+  if (res && typeof res === 'object' && Array.isArray(res.items)) return res.items
+  return []
+}
+
+function readStoredUser() {
   try {
-    const raw = localStorage.getItem(AUTH_KEY)
+    const raw = localStorage.getItem(AUTH_USER_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const user = JSON.parse(raw)
+    if (!user || typeof user !== 'object') return null
+    return user
   } catch {
     return null
   }
 }
 
+
 function App() {
-  const [auth, setAuth] = useState(readStoredAuth)
+  const [auth, setAuth] = useState(readStoredUser)
   const [loginForm, setLoginForm] = useState({ username: 'admin', password: '123456' })
   const [loginLoading, setLoginLoading] = useState(false)
   const [page, setPage] = useState('dashboard')
@@ -139,6 +150,13 @@ function App() {
   const [loading, setLoading] = useState({ dashboard: false })
   const [msg, setMsg] = useState({ type: 'info', text: 'Chọn một module để bắt đầu quản lý dữ liệu.' })
   const [dialog, setDialog] = useState({ open: false, key: '', mode: 'create', record: null, values: {} })
+  const [detailDialog, setDetailDialog] = useState({ open: false, key: '', record: null })
+  const [passwordDialog, setPasswordDialog] = useState({
+    open: false,
+    key: '',
+    record: null,
+    values: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  })
 
   const mod = useMemo(() => (page === 'dashboard' ? null : modules[page]), [page])
 
@@ -179,12 +197,12 @@ function App() {
         callApi('/api/schedules'),
       ])
       setRefs({
-        roles: Array.isArray(roles) ? roles : [],
-        members: Array.isArray(members) ? members : [],
-        trainers: Array.isArray(trainers) ? trainers : [],
-        packages: Array.isArray(packs) ? packs : [],
-        subscriptions: Array.isArray(subs) ? subs : [],
-        schedules: Array.isArray(sch) ? sch : [],
+        roles: asItems(roles),
+        members: asItems(members),
+        trainers: asItems(trainers),
+        packages: asItems(packs),
+        subscriptions: asItems(subs),
+        schedules: asItems(sch),
       })
     } catch {
       // ignore hard failure for refs
@@ -202,7 +220,6 @@ function App() {
       flag('dashboard', false)
     }
   }, [])
-
   const loadModule = useCallback(
     async (key, f) => {
       const m = modules[key]
@@ -211,7 +228,7 @@ function App() {
       try {
         const currentFilters = f ?? filters[key] ?? {}
         const rows = await callApi(m.listPath(currentFilters))
-        const list = Array.isArray(rows) ? rows : []
+        const list = asItems(rows)
         const normalized = m.clientFilter ? m.clientFilter(list, currentFilters) : list
         setData((p) => ({ ...p, [key]: normalized }))
       } catch (e) {
@@ -234,16 +251,15 @@ function App() {
     if (page === 'dashboard') return
     loadModule(page)
   }, [auth, page, loadModule])
-
   const login = async () => {
     if (!loginForm.username.trim() || !loginForm.password.trim()) {
-      notify('warning', 'Nhập tên đăng nhập và mật khẩu.')
+      notify('warning', 'Nhap ten dang nhap va mat khau.')
       return
     }
 
     setLoginLoading(true)
     try {
-      const user = await callApi('/api/accounts/login', {
+      const loginRes = await callApi('/api/accounts/login', {
         method: 'POST',
         body: {
           username: loginForm.username.trim(),
@@ -251,25 +267,29 @@ function App() {
         },
       })
 
+      const user = loginRes?.account ?? loginRes
       const normalizedRole = String(user?.roleName ?? '').trim().toLowerCase()
       if (normalizedRole !== 'admin') {
-        notify('error', 'Tài khoản không có quyền Admin.')
+        notify('error', 'Tai khoan khong co quyen Admin.')
+        return
+      }
+      if (!user) {
+        notify('error', 'Phan hoi dang nhap khong hop le.')
         return
       }
 
       setAuth(user)
-      localStorage.setItem(AUTH_KEY, JSON.stringify(user))
-      notify('success', `Chào mừng ${user.fullName || user.username}`)
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
+      notify('success', `Chao mung ${user.fullName || user.username}`)
     } catch (e) {
-      notify('error', `Đăng nhập thất bại: ${e.message}`)
+      notify('error', `Dang nhap that bai: ${e.message}`)
     } finally {
       setLoginLoading(false)
     }
   }
-
   const logout = () => {
     setAuth(null)
-    localStorage.removeItem(AUTH_KEY)
+    localStorage.removeItem(AUTH_USER_KEY)
     setPage('dashboard')
     notify('info', 'Đã đăng xuất.')
   }
@@ -330,6 +350,61 @@ function App() {
       await callApi(mod.del.path(row), { method: mod.del.method })
       notify('success', 'Đã xóa.')
       await Promise.all([loadModule(page), loadRefs()])
+    } catch (e) {
+      notify('error', e.message)
+    }
+  }
+
+  const openDetail = async (row) => {
+    if (!mod?.detail) return
+    try {
+      const record = await callApi(mod.detail.path(row))
+      setDetailDialog({ open: true, key: page, record })
+    } catch (e) {
+      notify('error', e.message)
+    }
+  }
+
+  const openPasswordDialog = (row) => {
+    if (!mod?.changePassword) return
+    setPasswordDialog({
+      open: true,
+      key: page,
+      record: row,
+      values: { currentPassword: '', newPassword: '', confirmPassword: '' },
+    })
+  }
+
+  const savePassword = async () => {
+    if (!passwordDialog.record || !modules[passwordDialog.key]?.changePassword) return
+    const { currentPassword, newPassword, confirmPassword } = passwordDialog.values
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      notify('warning', 'Vui lòng nhập đủ thông tin đổi mật khẩu.')
+      return
+    }
+    if (newPassword.length < 6) {
+      notify('warning', 'Mật khẩu mới cần tối thiểu 6 ký tự.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      notify('warning', 'Xác nhận mật khẩu mới không khớp.')
+      return
+    }
+
+    try {
+      const cfg = modules[passwordDialog.key].changePassword
+      await callApi(cfg.path(passwordDialog.record), {
+        method: cfg.method,
+        body: { currentPassword, newPassword },
+      })
+      notify('success', 'Đổi mật khẩu thành công.')
+      setPasswordDialog({
+        open: false,
+        key: '',
+        record: null,
+        values: { currentPassword: '', newPassword: '', confirmPassword: '' },
+      })
     } catch (e) {
       notify('error', e.message)
     }
@@ -430,7 +505,7 @@ function App() {
       )
     }
 
-    const t = ['text', 'number', 'date', 'datetime-local', 'email', 'time'].includes(meta.type) ? meta.type : 'text'
+    const t = ['text', 'number', 'date', 'datetime-local', 'email', 'time', 'password'].includes(meta.type) ? meta.type : 'text'
     return (
       <label key={name} className="field">
         <span>{meta.label}</span>
@@ -441,6 +516,12 @@ function App() {
         />
       </label>
     )
+  }
+
+  const renderDetailValue = (key, value, moduleKey) => {
+    if (value === undefined || value === null || value === '') return '-'
+    if (typeof value === 'object') return JSON.stringify(value)
+    return fmt(value, fieldMeta(key, moduleKey).type)
   }
 
   const cards = [
@@ -511,8 +592,8 @@ function App() {
           <div className="headRight">
             <div className={`msg ${msg.type}`}>{msg.text}</div>
             <div className="userBox">
-              <strong>{auth.fullName || auth.username}</strong>
-              <span>{auth.roleName}</span>
+              <strong>{auth?.fullName || auth?.username}</strong>
+              <span>{auth?.roleName}</span>
               <button className="ghost tiny" onClick={logout}>
                 Đăng xuất
               </button>
@@ -609,7 +690,12 @@ function App() {
                       </label>
                     )
                   })}
-                  <button className="ghost" onClick={() => loadModule(page)}>
+                  <button
+                    className="ghost"
+                    onClick={() => {
+                      loadModule(page, filters[page])
+                    }}
+                  >
                     Áp dụng
                   </button>
                 </div>
@@ -621,7 +707,7 @@ function App() {
                 <thead>
                   <tr>
                     {mod?.cols.map((c) => (
-                      <th key={c}>{fieldMeta(c).label}</th>
+                      <th key={c}>{fieldMeta(c, page).label}</th>
                     ))}
                     <th>Thao tác</th>
                   </tr>
@@ -635,12 +721,22 @@ function App() {
                     (data[page] ?? []).map((r) => (
                       <tr key={r[mod.key]}>
                         {mod.cols.map((c) => (
-                          <td key={`${r[mod.key]}-${c}`}>{fmt(r[c], fieldMeta(c).type)}</td>
+                          <td key={`${r[mod.key]}-${c}`}>{fmt(r[c], fieldMeta(c, page).type)}</td>
                         ))}
                         <td className="actions">
+                          {mod.detail ? (
+                            <button className="tiny ghost" onClick={() => openDetail(r)}>
+                              Chi tiết
+                            </button>
+                          ) : null}
                           {mod.update ? (
                             <button className="tiny" onClick={() => openForm('update', r)}>
                               Sửa
+                            </button>
+                          ) : null}
+                          {mod.changePassword ? (
+                            <button className="tiny ghost" onClick={() => openPasswordDialog(r)}>
+                              Đổi mật khẩu
                             </button>
                           ) : null}
                           {mod.toggle ? (
@@ -680,6 +776,86 @@ function App() {
         )}
       </main>
 
+      {detailDialog.open ? (
+        <div className="modalBg" onClick={() => setDetailDialog((p) => ({ ...p, open: false }))}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3>Chi tiết bản ghi</h3>
+              <button className="ghost" onClick={() => setDetailDialog((p) => ({ ...p, open: false }))}>
+                Đóng
+              </button>
+            </header>
+            <div className="detailRows">
+              {Object.entries(detailDialog.record ?? {}).map(([k, v]) => (
+                <div key={k} className="detailRow">
+                  <strong>{fieldMeta(k, detailDialog.key).label}</strong>
+                  <span>{renderDetailValue(k, v, detailDialog.key)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {passwordDialog.open ? (
+        <div className="modalBg" onClick={() => setPasswordDialog((p) => ({ ...p, open: false }))}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3>Đổi mật khẩu tài khoản</h3>
+              <button className="ghost" onClick={() => setPasswordDialog((p) => ({ ...p, open: false }))}>
+                Đóng
+              </button>
+            </header>
+            <p className="loginHint">Tài khoản: {passwordDialog.record?.username}</p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                savePassword()
+              }}
+            >
+              <div className="grid">
+                <label className="field">
+                  <span>Mật khẩu hiện tại</span>
+                  <input
+                    type="password"
+                    value={passwordDialog.values.currentPassword}
+                    onChange={(e) =>
+                      setPasswordDialog((p) => ({ ...p, values: { ...p.values, currentPassword: e.target.value } }))
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Mật khẩu mới</span>
+                  <input
+                    type="password"
+                    value={passwordDialog.values.newPassword}
+                    onChange={(e) =>
+                      setPasswordDialog((p) => ({ ...p, values: { ...p.values, newPassword: e.target.value } }))
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span>Xác nhận mật khẩu mới</span>
+                  <input
+                    type="password"
+                    value={passwordDialog.values.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordDialog((p) => ({ ...p, values: { ...p.values, confirmPassword: e.target.value } }))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="formActions">
+                <button type="button" className="ghost" onClick={() => setPasswordDialog((p) => ({ ...p, open: false }))}>
+                  Hủy
+                </button>
+                <button type="submit">Cập nhật mật khẩu</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {dialog.open ? (
         <div className="modalBg" onClick={() => setDialog((p) => ({ ...p, open: false }))}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -715,4 +891,18 @@ function App() {
 }
 
 export default App
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

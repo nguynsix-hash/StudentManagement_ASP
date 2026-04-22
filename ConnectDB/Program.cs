@@ -26,10 +26,10 @@ public class Program
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         }
+
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        // CORS - cho phép gọi API từ mọi nơi
         builder.Services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
@@ -57,13 +57,11 @@ public class Program
             SeedInMemoryData(app);
         }
 
-        // Bật Swagger ở mọi môi trường (để thầy test API trên trình duyệt)
         app.UseSwagger();
         app.UseSwaggerUI();
 
         app.UseCors();
         app.UseHttpsRedirection();
-        app.UseAuthorization();
         app.MapControllers();
         app.Run();
     }

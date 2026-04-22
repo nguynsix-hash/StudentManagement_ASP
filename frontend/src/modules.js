@@ -42,6 +42,7 @@ export const modules = {
     title: 'Quản lý vai trò',
     listPath: () => '/api/roles',
     key: 'id',
+    detail: { path: (r) => `/api/roles/${r.id}` },
     cols: ['id', 'name', 'description'],
     create: { method: 'POST', path: () => '/api/roles', fields: ['name', 'description'] },
     update: { method: 'PUT', path: (r) => `/api/roles/${r.id}`, fields: ['name', 'description'] },
@@ -51,6 +52,7 @@ export const modules = {
     title: 'Quản lý tài khoản',
     listPath: () => '/api/accounts',
     key: 'id',
+    detail: { path: (r) => `/api/accounts/${r.id}` },
     cols: ['id', 'username', 'fullName', 'roleName', 'email', 'phone', 'isActive', 'createdAt'],
     create: {
       method: 'POST',
@@ -62,6 +64,11 @@ export const modules = {
       path: (r) => `/api/accounts/${r.id}`,
       fields: ['fullName', 'email', 'phone', 'roleId', 'isActive'],
     },
+    changePassword: {
+      method: 'PATCH',
+      path: (r) => `/api/accounts/${r.id}/password`,
+      fields: ['currentPassword', 'newPassword'],
+    },
     del: { method: 'DELETE', path: (r) => `/api/accounts/${r.id}` },
   },
   members: {
@@ -69,6 +76,7 @@ export const modules = {
     listPath: (f) => (f.keyword ? `/api/members/search?keyword=${encodeURIComponent(f.keyword)}` : '/api/members'),
     filters: [{ key: 'keyword', type: 'text', label: 'Tìm kiếm' }],
     key: 'id',
+    detail: { path: (r) => `/api/members/${r.id}` },
     cols: ['id', 'memberCode', 'fullName', 'gender', 'phone', 'email', 'isActive', 'createdAt'],
     create: {
       method: 'POST',
@@ -87,6 +95,7 @@ export const modules = {
     title: 'Quản lý huấn luyện viên',
     listPath: () => '/api/trainers',
     key: 'id',
+    detail: { path: (r) => `/api/trainers/${r.id}` },
     cols: ['id', 'trainerCode', 'fullName', 'specialty', 'phone', 'email', 'isActive', 'createdAt'],
     create: { method: 'POST', path: () => '/api/trainers', fields: ['trainerCode', 'fullName', 'specialty', 'phone', 'email'] },
     update: {
@@ -101,6 +110,7 @@ export const modules = {
     title: 'Quản lý gói tập',
     listPath: () => '/api/membershippackages',
     key: 'id',
+    detail: { path: (r) => `/api/membershippackages/${r.id}` },
     cols: ['id', 'packageCode', 'name', 'durationDays', 'price', 'isActive', 'createdAt'],
     create: {
       method: 'POST',
@@ -120,6 +130,7 @@ export const modules = {
     listPath: (f) => (f.memberId ? `/api/subscriptions/member/${f.memberId}` : '/api/subscriptions'),
     filters: [{ key: 'memberId', type: 'select', label: 'Hội viên', from: 'members' }],
     key: 'id',
+    detail: { path: (r) => `/api/subscriptions/${r.id}` },
     cols: ['id', 'memberName', 'packageName', 'startDate', 'endDate', 'status', 'createdAt'],
     create: {
       method: 'POST',
@@ -132,6 +143,7 @@ export const modules = {
     listPath: (f) => (f.subscriptionId ? `/api/payments/subscription/${f.subscriptionId}` : '/api/payments'),
     filters: [{ key: 'subscriptionId', type: 'select', label: 'Đăng ký gói', from: 'subscriptions' }],
     key: 'id',
+    detail: { path: (r) => `/api/payments/${r.id}` },
     cols: ['id', 'subscriptionId', 'memberName', 'amount', 'paymentMethod', 'status', 'paymentDate'],
     create: {
       method: 'POST',
@@ -147,18 +159,18 @@ export const modules = {
   },
   schedules: {
     title: 'Quản lý lịch tập',
-    listPath: (f) => (f.trainerId ? `/api/schedules/trainer/${f.trainerId}` : f.memberId ? `/api/schedules/member/${f.memberId}` : '/api/schedules'),
-    clientFilter: (rows, f) =>
-      rows.filter(
-        (r) =>
-          (!f.trainerId || String(r.trainerId) === String(f.trainerId)) &&
-          (!f.memberId || String(r.memberId ?? '') === String(f.memberId)),
-      ),
+    listPath: (f) => {
+      const q = new URLSearchParams()
+      if (f.trainerId) q.append('trainerId', f.trainerId)
+      if (f.memberId) q.append('memberId', f.memberId)
+      return `/api/schedules${q.toString() ? `?${q.toString()}` : ''}`
+    },
     filters: [
       { key: 'trainerId', type: 'select', label: 'Huấn luyện viên', from: 'trainers' },
       { key: 'memberId', type: 'select', label: 'Hội viên', from: 'members' },
     ],
     key: 'id',
+    detail: { path: (r) => `/api/schedules/${r.id}` },
     cols: ['id', 'title', 'scheduleDate', 'startTime', 'endTime', 'trainerName', 'memberName'],
     create: {
       method: 'POST',
@@ -175,6 +187,8 @@ export const modules = {
   attendances: {
     title: 'Quản lý điểm danh',
     listPath: (f) => {
+      if (f.scheduleId && !f.memberId) return `/api/attendances/schedule/${f.scheduleId}`
+      if (f.memberId && !f.scheduleId) return `/api/attendances/member/${f.memberId}/history`
       const q = new URLSearchParams()
       if (f.scheduleId) q.append('scheduleId', f.scheduleId)
       if (f.memberId) q.append('memberId', f.memberId)
@@ -185,6 +199,7 @@ export const modules = {
       { key: 'memberId', type: 'select', label: 'Hội viên', from: 'members' },
     ],
     key: 'id',
+    detail: { path: (r) => `/api/attendances/${r.id}` },
     cols: ['id', 'scheduleTitle', 'memberName', 'status', 'recordedAt', 'note'],
     create: {
       method: 'POST',
@@ -212,7 +227,9 @@ export function fieldMeta(key, moduleKey) {
     name: { type: 'text', label: 'Tên' },
     description: { type: 'text', label: 'Mô tả' },
     username: { type: 'text', label: 'Tên đăng nhập' },
-    password: { type: 'text', label: 'Mật khẩu' },
+    password: { type: 'password', label: 'Mật khẩu' },
+    currentPassword: { type: 'password', label: 'Mật khẩu hiện tại' },
+    newPassword: { type: 'password', label: 'Mật khẩu mới' },
     fullName: { type: 'text', label: 'Họ và tên' },
     roleId: { type: 'select', label: 'Vai trò', from: 'roles', number: true },
     memberId: { type: 'select', label: 'Hội viên', from: 'members', number: true, nullable: true },

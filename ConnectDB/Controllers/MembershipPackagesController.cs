@@ -20,12 +20,12 @@ public class MembershipPackagesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MembershipPackageResponseDto>>> GetMembershipPackages()
     {
-        var packages = await _context.MembershipPackages
+        var items = await _context.MembershipPackages
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => MapToResponse(p))
             .ToListAsync();
 
-        return Ok(packages);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]

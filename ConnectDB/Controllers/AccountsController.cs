@@ -20,12 +20,13 @@ public class AccountsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<AccountResponseDto>>> GetAccounts()
     {
-        var accounts = await _context.Accounts
+        var items = await _context.Accounts
             .Include(a => a.Role)
+            .OrderByDescending(a => a.CreatedAt)
             .Select(a => MapToResponse(a))
             .ToListAsync();
 
-        return Ok(accounts);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]

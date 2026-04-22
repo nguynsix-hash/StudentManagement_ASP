@@ -20,12 +20,12 @@ public class MembersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MemberResponseDto>>> GetMembers()
     {
-        var members = await _context.Members
+        var items = await _context.Members
             .OrderByDescending(m => m.CreatedAt)
             .Select(m => MapToResponse(m))
             .ToListAsync();
 
-        return Ok(members);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]
@@ -46,10 +46,10 @@ public class MembersController : ControllerBase
         var normalized = keyword?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            return Ok(new List<MemberResponseDto>());
+            return Ok(Array.Empty<MemberResponseDto>());
         }
 
-        var members = await _context.Members
+        var items = await _context.Members
             .Where(m =>
                 m.MemberCode.Contains(normalized) ||
                 m.FullName.Contains(normalized) ||
@@ -58,7 +58,7 @@ public class MembersController : ControllerBase
             .Select(m => MapToResponse(m))
             .ToListAsync();
 
-        return Ok(members);
+        return Ok(items);
     }
 
     [HttpPost]

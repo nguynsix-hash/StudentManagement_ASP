@@ -18,17 +18,32 @@ public class SchedulesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ScheduleResponseDto>>> GetSchedules()
+    public async Task<ActionResult<IEnumerable<ScheduleResponseDto>>> GetSchedules(
+        [FromQuery] int? trainerId,
+        [FromQuery] int? memberId)
     {
-        var schedules = await _context.Schedules
+        var query = _context.Schedules
             .Include(s => s.Trainer)
             .Include(s => s.Member)
+            .AsQueryable();
+
+        if (trainerId.HasValue)
+        {
+            query = query.Where(s => s.TrainerId == trainerId.Value);
+        }
+
+        if (memberId.HasValue)
+        {
+            query = query.Where(s => s.MemberId == memberId.Value);
+        }
+
+        var items = await query
             .OrderByDescending(s => s.ScheduleDate)
             .ThenBy(s => s.StartTime)
             .Select(s => MapToResponse(s))
             .ToListAsync();
 
-        return Ok(schedules);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]
@@ -56,7 +71,7 @@ public class SchedulesController : ControllerBase
             return NotFound(new { message = "Trainer not found." });
         }
 
-        var schedules = await _context.Schedules
+        var items = await _context.Schedules
             .Include(s => s.Trainer)
             .Include(s => s.Member)
             .Where(s => s.TrainerId == trainerId)
@@ -65,7 +80,7 @@ public class SchedulesController : ControllerBase
             .Select(s => MapToResponse(s))
             .ToListAsync();
 
-        return Ok(schedules);
+        return Ok(items);
     }
 
     [HttpGet("member/{memberId}")]
@@ -77,7 +92,7 @@ public class SchedulesController : ControllerBase
             return NotFound(new { message = "Member not found." });
         }
 
-        var schedules = await _context.Schedules
+        var items = await _context.Schedules
             .Include(s => s.Trainer)
             .Include(s => s.Member)
             .Where(s => s.MemberId == memberId)
@@ -86,7 +101,7 @@ public class SchedulesController : ControllerBase
             .Select(s => MapToResponse(s))
             .ToListAsync();
 
-        return Ok(schedules);
+        return Ok(items);
     }
 
     [HttpPost]

@@ -498,6 +498,64 @@ tbody tr:hover {
   gap: 0.45rem;
 }
 
+.pager {
+  margin-top: 0.72rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pager span {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+}
+
+.pagerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pagerActions label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pagerActions label span {
+  font-size: 0.8rem;
+}
+
+.detailRows {
+  margin-top: 0.8rem;
+  border: 1px solid #e6edf6;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #eef3f9;
+}
+
+.detailRow:last-child {
+  border-bottom: 0;
+}
+
+.detailRow strong {
+  color: #2e4460;
+}
+
+.detailRow span {
+  color: #15253a;
+  word-break: break-word;
+}
+
 @media (max-width: 1180px) {
   .admin {
     grid-template-columns: 1fr;
@@ -529,6 +587,11 @@ tbody tr:hover {
 
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .detailRow {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
   }
 }
 

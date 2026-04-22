@@ -20,12 +20,12 @@ public class TrainersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TrainerResponseDto>>> GetTrainers()
     {
-        var trainers = await _context.Trainers
+        var items = await _context.Trainers
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => MapToResponse(t))
             .ToListAsync();
 
-        return Ok(trainers);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]

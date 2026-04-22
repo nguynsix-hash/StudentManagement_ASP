@@ -20,7 +20,7 @@ public class PaymentsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PaymentResponseDto>>> GetPayments()
     {
-        var payments = await _context.Payments
+        var items = await _context.Payments
             .Include(p => p.Subscription)
                 .ThenInclude(s => s!.Member)
             .Include(p => p.Subscription)
@@ -29,7 +29,7 @@ public class PaymentsController : ControllerBase
             .Select(p => MapToResponse(p))
             .ToListAsync();
 
-        return Ok(payments);
+        return Ok(items);
     }
 
     [HttpGet("{id}")]
@@ -59,7 +59,7 @@ public class PaymentsController : ControllerBase
             return NotFound(new { message = "Subscription not found." });
         }
 
-        var payments = await _context.Payments
+        var items = await _context.Payments
             .Include(p => p.Subscription)
                 .ThenInclude(s => s!.Member)
             .Include(p => p.Subscription)
@@ -69,7 +69,7 @@ public class PaymentsController : ControllerBase
             .Select(p => MapToResponse(p))
             .ToListAsync();
 
-        return Ok(payments);
+        return Ok(items);
     }
 
     [HttpPost]
