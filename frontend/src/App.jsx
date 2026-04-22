@@ -28,7 +28,19 @@ async function callApi(path, { method = 'GET', body } = {}) {
     }
   }
   if (!res.ok) {
-    const msg = data && typeof data === 'object' && data.message ? data.message : `Yêu cầu thất bại (${res.status})`
+    let msg = `Yêu cầu thất bại (${res.status})`
+    if (data && typeof data === 'object') {
+      if (data.message) {
+        msg = data.message
+      } else if (data.errors && typeof data.errors === 'object') {
+        const firstError = Object.values(data.errors).flat().find(Boolean)
+        if (typeof firstError === 'string') {
+          msg = firstError
+        }
+      } else if (data.title) {
+        msg = data.title
+      }
+    }
     throw new Error(msg)
   }
   return data
@@ -62,6 +74,12 @@ function toInput(meta, value) {
     const offset = d.getTimezoneOffset()
     return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16)
   }
+  if (meta.type === 'time') {
+    const text = String(value)
+    if (/^\d{2}:\d{2}:\d{2}$/.test(text)) return text.slice(0, 5)
+    if (/^\d{2}:\d{2}$/.test(text)) return text
+    return ''
+  }
   return String(value)
 }
 
@@ -78,6 +96,12 @@ function toPayload(meta, value) {
   if (meta.type === 'datetime-local') {
     const d = new Date(value)
     return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+  }
+  if (meta.type === 'time') {
+    const text = String(value).trim()
+    if (/^\d{2}:\d{2}$/.test(text)) return `${text}:00`
+    if (/^\d{2}:\d{2}:\d{2}$/.test(text)) return text
+    return undefined
   }
   return value
 }
@@ -119,11 +143,20 @@ function App() {
   const mod = useMemo(() => (page === 'dashboard' ? null : modules[page]), [page])
 
   const optionsFrom = useCallback(
-    (src) => {
+    (src, { activeOnly = false } = {}) => {
       if (src === 'roles') return refs.roles.map((r) => ({ value: String(r.id), label: `${r.name} (#${r.id})` }))
-      if (src === 'members') return refs.members.map((r) => ({ value: String(r.id), label: `${r.fullName} (${r.memberCode})` }))
-      if (src === 'trainers') return refs.trainers.map((r) => ({ value: String(r.id), label: `${r.fullName} (${r.trainerCode})` }))
-      if (src === 'packages') return refs.packages.map((r) => ({ value: String(r.id), label: `${r.name} (${r.packageCode})` }))
+      if (src === 'members') {
+        const list = activeOnly ? refs.members.filter((r) => r.isActive) : refs.members
+        return list.map((r) => ({ value: String(r.id), label: `${r.fullName} (${r.memberCode})` }))
+      }
+      if (src === 'trainers') {
+        const list = activeOnly ? refs.trainers.filter((r) => r.isActive) : refs.trainers
+        return list.map((r) => ({ value: String(r.id), label: `${r.fullName} (${r.trainerCode})` }))
+      }
+      if (src === 'packages') {
+        const list = activeOnly ? refs.packages.filter((r) => r.isActive) : refs.packages
+        return list.map((r) => ({ value: String(r.id), label: `${r.name} (${r.packageCode})` }))
+      }
       if (src === 'subscriptions') return refs.subscriptions.map((r) => ({ value: String(r.id), label: `#${r.id} ${r.memberName}` }))
       if (src === 'schedules') return refs.schedules.map((r) => ({ value: String(r.id), label: `#${r.id} ${r.title}` }))
       return []
@@ -176,8 +209,11 @@ function App() {
       if (!m) return
       flag(key, true)
       try {
-        const rows = await callApi(m.listPath(f ?? filters[key] ?? {}))
-        setData((p) => ({ ...p, [key]: Array.isArray(rows) ? rows : [] }))
+        const currentFilters = f ?? filters[key] ?? {}
+        const rows = await callApi(m.listPath(currentFilters))
+        const list = Array.isArray(rows) ? rows : []
+        const normalized = m.clientFilter ? m.clientFilter(list, currentFilters) : list
+        setData((p) => ({ ...p, [key]: normalized }))
       } catch (e) {
         notify('error', e.message)
       } finally {
@@ -243,7 +279,7 @@ function App() {
     if (!cfg) return
     const values = {}
     cfg.fields.forEach((name) => {
-      const meta = fieldMeta(name)
+      const meta = fieldMeta(name, page)
       values[name] = toInput(meta, record ? record[name] : '')
     })
     setDialog({ open: true, key: page, mode, record, values })
@@ -257,10 +293,25 @@ function App() {
 
     const body = {}
     cfg.fields.forEach((name) => {
-      const meta = fieldMeta(name)
+      const meta = fieldMeta(name, dialog.key)
       const parsed = toPayload(meta, dialog.values[name])
       if (parsed !== undefined) body[name] = parsed
     })
+
+    if (dialog.key === 'schedules' && dialog.mode === 'create') {
+      const trainer = refs.trainers.find((x) => x.id === Number(body.trainerId))
+      if (!trainer || !trainer.isActive) {
+        notify('error', 'Huấn luyện viên đang bị khóa. Hãy bật hoạt động trước khi tạo lịch.')
+        return
+      }
+      if (body.memberId !== null && body.memberId !== undefined) {
+        const member = refs.members.find((x) => x.id === Number(body.memberId))
+        if (!member || !member.isActive) {
+          notify('error', 'Hội viên đang bị khóa. Hãy bật hoạt động trước khi tạo lịch.')
+          return
+        }
+      }
+    }
 
     try {
       await callApi(cfg.path(dialog.record), { method: cfg.method, body })
@@ -327,7 +378,7 @@ function App() {
   }
 
   const renderField = (name) => {
-    const meta = fieldMeta(name)
+    const meta = fieldMeta(name, dialog.key)
     const value = dialog.values[name]
 
     if (meta.type === 'checkbox') {
@@ -344,7 +395,11 @@ function App() {
     }
 
     if (meta.type === 'select') {
-      const opts = meta.options ?? optionsFrom(meta.from)
+      const onlyActive =
+        dialog.mode === 'create' &&
+        ((dialog.key === 'schedules' && (meta.from === 'trainers' || meta.from === 'members')) ||
+          (dialog.key === 'subscriptions' && (meta.from === 'members' || meta.from === 'packages')))
+      const opts = meta.options ?? optionsFrom(meta.from, { activeOnly: onlyActive })
       return (
         <label key={name} className="field">
           <span>{meta.label}</span>
@@ -375,7 +430,7 @@ function App() {
       )
     }
 
-    const t = ['text', 'number', 'date', 'datetime-local', 'email'].includes(meta.type) ? meta.type : 'text'
+    const t = ['text', 'number', 'date', 'datetime-local', 'email', 'time'].includes(meta.type) ? meta.type : 'text'
     return (
       <label key={name} className="field">
         <span>{meta.label}</span>

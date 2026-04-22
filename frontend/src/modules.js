@@ -11,10 +11,30 @@ export const navItems = [
   ['attendances', 'Điểm danh'],
 ]
 
-const statusOpts = [
+const attendanceStatusOpts = [
   { value: 'Present', label: 'Có mặt' },
   { value: 'Absent', label: 'Vắng' },
   { value: 'Late', label: 'Đi muộn' },
+]
+
+const subscriptionStatusOpts = [
+  { value: 'Active', label: 'Đang hoạt động' },
+  { value: 'Expired', label: 'Hết hạn' },
+  { value: 'Cancelled', label: 'Đã hủy' },
+]
+
+const paymentStatusOpts = [
+  { value: 'Paid', label: 'Đã thanh toán' },
+  { value: 'Pending', label: 'Chờ thanh toán' },
+  { value: 'Refunded', label: 'Đã hoàn tiền' },
+  { value: 'Cancelled', label: 'Đã hủy' },
+]
+
+const paymentMethodOpts = [
+  { value: 'Cash', label: 'Tiền mặt' },
+  { value: 'Card', label: 'Thẻ' },
+  { value: 'Transfer', label: 'Chuyển khoản' },
+  { value: 'E-Wallet', label: 'Ví điện tử' },
 ]
 
 export const modules = {
@@ -128,6 +148,12 @@ export const modules = {
   schedules: {
     title: 'Quản lý lịch tập',
     listPath: (f) => (f.trainerId ? `/api/schedules/trainer/${f.trainerId}` : f.memberId ? `/api/schedules/member/${f.memberId}` : '/api/schedules'),
+    clientFilter: (rows, f) =>
+      rows.filter(
+        (r) =>
+          (!f.trainerId || String(r.trainerId) === String(f.trainerId)) &&
+          (!f.memberId || String(r.memberId ?? '') === String(f.memberId)),
+      ),
     filters: [
       { key: 'trainerId', type: 'select', label: 'Huấn luyện viên', from: 'trainers' },
       { key: 'memberId', type: 'select', label: 'Hội viên', from: 'members' },
@@ -174,7 +200,13 @@ export const modules = {
   },
 }
 
-export function fieldMeta(key) {
+export function fieldMeta(key, moduleKey) {
+  const statusOptionsByModule = {
+    attendances: attendanceStatusOpts,
+    payments: paymentStatusOpts,
+    subscriptions: subscriptionStatusOpts,
+  }
+
   const map = {
     id: { type: 'number', label: 'ID' },
     name: { type: 'text', label: 'Tên' },
@@ -201,15 +233,19 @@ export function fieldMeta(key) {
     price: { type: 'number', label: 'Giá' },
     startDate: { type: 'date', label: 'Ngày bắt đầu' },
     endDate: { type: 'date', label: 'Ngày kết thúc' },
-    status: { type: 'select', label: 'Trạng thái', options: statusOpts },
+    status: { type: 'select', label: 'Trạng thái', options: statusOptionsByModule[moduleKey] ?? [] },
     amount: { type: 'number', label: 'Số tiền' },
     paymentDate: { type: 'datetime-local', label: 'Ngày thanh toán' },
-    paymentMethod: { type: 'text', label: 'Phương thức thanh toán' },
+    paymentMethod: {
+      type: moduleKey === 'payments' ? 'select' : 'text',
+      label: 'Phương thức thanh toán',
+      options: moduleKey === 'payments' ? paymentMethodOpts : undefined,
+    },
     note: { type: 'textarea', label: 'Ghi chú' },
     title: { type: 'text', label: 'Tiêu đề' },
     scheduleDate: { type: 'date', label: 'Ngày tập' },
-    startTime: { type: 'text', label: 'Giờ bắt đầu' },
-    endTime: { type: 'text', label: 'Giờ kết thúc' },
+    startTime: { type: 'time', label: 'Giờ bắt đầu' },
+    endTime: { type: 'time', label: 'Giờ kết thúc' },
     notes: { type: 'textarea', label: 'Ghi chú thêm' },
     isActive: { type: 'checkbox', label: 'Đang hoạt động' },
     createdAt: { type: 'datetime', label: 'Ngày tạo' },
