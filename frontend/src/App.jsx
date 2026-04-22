@@ -628,7 +628,7 @@ function App() {
             <input
               value={loginForm.username}
               onChange={(e) => setLoginForm((p) => ({ ...p, username: e.target.value }))}
-              placeholder="Nháº­p tÃªn Ä‘Äƒng nháº­p"
+              placeholder="Nhập tên đăng nhập"
               autoComplete="off"
             />
           </label>
@@ -638,7 +638,7 @@ function App() {
               type="password"
               value={loginForm.password}
               onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
-              placeholder="Nháº­p máº­t kháº©u"
+              placeholder="Nhập mật khẩu"
               autoComplete="new-password"
             />
           </label>
