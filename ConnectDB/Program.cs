@@ -42,6 +42,16 @@ public class Program
 
         var app = builder.Build();
 
+        app.UseExceptionHandler(errorApp =>
+        {
+            errorApp.Run(async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { message = "An unexpected error occurred." });
+            });
+        });
+
         if (useInMemoryDb)
         {
             SeedInMemoryData(app);
@@ -189,17 +199,21 @@ public class Program
         {
             var adminRoleId = context.Roles
                 .Where(r => r.Name == "Admin")
-                .Select(r => r.Id)
-                .First();
+                .Select(r => (int?)r.Id)
+                .FirstOrDefault();
+            if (!adminRoleId.HasValue)
+            {
+                return;
+            }
 
             context.Accounts.Add(new Account
             {
                 Username = "admin",
-                Password = "123456",
+                Password = BCrypt.Net.BCrypt.HashPassword("123456"),
                 FullName = "Demo Admin",
                 Email = "admin.demo@gym.local",
                 Phone = "0900000003",
-                RoleId = adminRoleId,
+                RoleId = adminRoleId.Value,
                 IsActive = true,
                 CreatedAt = DateTime.Now
             });

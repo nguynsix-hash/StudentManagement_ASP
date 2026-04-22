@@ -155,12 +155,13 @@ public class SubscriptionsController : ControllerBase
             return NotFound();
         }
 
-        var isActive = subscription.Status == "Active" && subscription.EndDate.Date >= DateTime.Today;
+        var currentStatus = NormalizeStatusForRead(subscription);
+        var isActive = currentStatus == "Active";
 
         return Ok(new SubscriptionStatusDto
         {
             SubscriptionId = subscription.Id,
-            Status = subscription.Status,
+            Status = currentStatus,
             IsActive = isActive,
             StartDate = subscription.StartDate,
             EndDate = subscription.EndDate
@@ -176,7 +177,14 @@ public class SubscriptionsController : ControllerBase
             return NotFound();
         }
 
-        subscription.Status = dto.Status.Trim();
+        var normalizedStatus = dto.Status.Trim();
+        if (normalizedStatus.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
+            subscription.EndDate.Date < DateTime.Today)
+        {
+            return BadRequest(new { message = "Cannot set Active status for an expired subscription. Please extend it first." });
+        }
+
+        subscription.Status = ToCanonicalStatus(normalizedStatus);
         await _context.SaveChangesAsync();
         return NoContent();
     }
@@ -210,8 +218,26 @@ public class SubscriptionsController : ControllerBase
             PackagePrice = s.MembershipPackage?.Price ?? 0,
             StartDate = s.StartDate,
             EndDate = s.EndDate,
-            Status = s.Status,
+            Status = NormalizeStatusForRead(s),
             CreatedAt = s.CreatedAt
         };
+    }
+
+    private static string NormalizeStatusForRead(Subscription subscription)
+    {
+        if (subscription.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Cancelled";
+        }
+
+        return subscription.EndDate.Date >= DateTime.Today ? "Active" : "Expired";
+    }
+
+    private static string ToCanonicalStatus(string status)
+    {
+        if (status.Equals("Active", StringComparison.OrdinalIgnoreCase)) return "Active";
+        if (status.Equals("Expired", StringComparison.OrdinalIgnoreCase)) return "Expired";
+        if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "Cancelled";
+        return status;
     }
 }

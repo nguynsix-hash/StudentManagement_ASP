@@ -71,7 +71,7 @@ public class AccountsController : ControllerBase
         var account = new Account
         {
             Username = username,
-            Password = dto.Password,
+            Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             FullName = dto.FullName.Trim(),
             Email = dto.Email,
             Phone = dto.Phone,
@@ -98,12 +98,17 @@ public class AccountsController : ControllerBase
             .Include(a => a.Role)
             .FirstOrDefaultAsync(a =>
                 a.Username.ToLower() == username.ToLower() &&
-                a.Password == dto.Password &&
                 a.IsActive);
 
-        if (account == null)
+        if (account == null || !VerifyPassword(account.Password, dto.Password))
         {
             return Unauthorized(new { message = "Invalid credentials or inactive account." });
+        }
+
+        if (!IsBcryptHash(account.Password))
+        {
+            account.Password = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            await _context.SaveChangesAsync();
         }
 
         return Ok(MapToResponse(account));
@@ -148,6 +153,25 @@ public class AccountsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("{id}/password")]
+    public async Task<IActionResult> ChangePassword(int id, AccountChangePasswordDto dto)
+    {
+        var account = await _context.Accounts.FindAsync(id);
+        if (account == null)
+        {
+            return NotFound();
+        }
+
+        if (!VerifyPassword(account.Password, dto.CurrentPassword))
+        {
+            return BadRequest(new { message = "Current password is incorrect." });
+        }
+
+        account.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
     private static AccountResponseDto MapToResponse(Account account)
     {
         return new AccountResponseDto
@@ -162,5 +186,17 @@ public class AccountsController : ControllerBase
             IsActive = account.IsActive,
             CreatedAt = account.CreatedAt
         };
+    }
+
+    private static bool VerifyPassword(string storedPassword, string providedPassword)
+    {
+        return IsBcryptHash(storedPassword)
+            ? BCrypt.Net.BCrypt.Verify(providedPassword, storedPassword)
+            : storedPassword == providedPassword;
+    }
+
+    private static bool IsBcryptHash(string password)
+    {
+        return password.StartsWith("$2a$") || password.StartsWith("$2b$") || password.StartsWith("$2y$");
     }
 }

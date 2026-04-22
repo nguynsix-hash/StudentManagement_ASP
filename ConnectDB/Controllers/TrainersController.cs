@@ -118,6 +118,12 @@ public class TrainersController : ControllerBase
             return NotFound();
         }
 
+        var hasSchedules = await _context.Schedules.AnyAsync(s => s.TrainerId == id);
+        if (hasSchedules)
+        {
+            return BadRequest(new { message = "Cannot delete trainer because it is assigned to schedules." });
+        }
+
         _context.Trainers.Remove(trainer);
         await _context.SaveChangesAsync();
         return NoContent();

@@ -20,6 +20,7 @@ public class MemberCreateDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 
@@ -45,6 +46,7 @@ public class MemberUpdateDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 

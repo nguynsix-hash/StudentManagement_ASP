@@ -85,7 +85,7 @@ public class PaymentsController : ControllerBase
             return BadRequest(new { message = "SubscriptionId does not exist." });
         }
 
-        var amount = dto.Amount > 0 ? dto.Amount : subscription.MembershipPackage?.Price ?? 0;
+        var amount = dto.Amount ?? subscription.MembershipPackage?.Price ?? 0;
         if (amount <= 0)
         {
             return BadRequest(new { message = "Amount must be greater than 0." });

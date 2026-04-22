@@ -23,6 +23,7 @@ public class SubscriptionStatusUpdateDto
 {
     [Required]
     [StringLength(20)]
+    [RegularExpression("^(Active|Expired|Cancelled)$", ErrorMessage = "Status must be Active, Expired, or Cancelled.")]
     public string Status { get; set; } = "Active";
 }
 

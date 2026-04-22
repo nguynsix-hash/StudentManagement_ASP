@@ -9,6 +9,7 @@ public class AccountRegisterDto
     public string Username { get; set; } = string.Empty;
 
     [Required]
+    [MinLength(6)]
     [StringLength(255)]
     public string Password { get; set; } = string.Empty;
 
@@ -16,6 +17,7 @@ public class AccountRegisterDto
     [StringLength(120)]
     public string FullName { get; set; } = string.Empty;
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 
@@ -42,6 +44,7 @@ public class AccountUpdateDto
     [StringLength(120)]
     public string FullName { get; set; } = string.Empty;
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 
@@ -51,6 +54,18 @@ public class AccountUpdateDto
     public int RoleId { get; set; }
 
     public bool IsActive { get; set; }
+}
+
+public class AccountChangePasswordDto
+{
+    [Required]
+    [StringLength(255)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(6)]
+    [StringLength(255)]
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 public class AccountResponseDto

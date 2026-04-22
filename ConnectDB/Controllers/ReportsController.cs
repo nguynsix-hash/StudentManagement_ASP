@@ -49,7 +49,7 @@ public class ReportsController : ControllerBase
                 MemberName = s.Member!.FullName,
                 PackageName = s.MembershipPackage!.Name,
                 EndDate = s.EndDate,
-                DaysRemaining = EF.Functions.DateDiffDay(today, s.EndDate)
+                DaysRemaining = (s.EndDate - today).Days
             })
             .ToListAsync();
 

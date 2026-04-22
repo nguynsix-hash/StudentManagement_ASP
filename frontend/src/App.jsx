@@ -28,7 +28,7 @@ async function callApi(path, { method = 'GET', body } = {}) {
     }
   }
   if (!res.ok) {
-    const msg = data && typeof data === 'object' && data.message ? data.message : `Request failed (${res.status})`
+    const msg = data && typeof data === 'object' && data.message ? data.message : `Yêu cầu thất bại (${res.status})`
     throw new Error(msg)
   }
   return data
@@ -36,7 +36,7 @@ async function callApi(path, { method = 'GET', body } = {}) {
 
 function fmt(v, t) {
   if (v === undefined || v === null || v === '') return '-'
-  if (t === 'boolean') return v ? 'Yes' : 'No'
+  if (t === 'boolean') return v ? 'Có' : 'Không'
   if (t === 'currency') return Number(v).toLocaleString('vi-VN')
   if (t === 'date') {
     const d = new Date(v)
@@ -113,7 +113,7 @@ function App() {
   const [refs, setRefs] = useState({ roles: [], members: [], trainers: [], packages: [], subscriptions: [], schedules: [] })
   const [filters, setFilters] = useState(emptyFilters)
   const [loading, setLoading] = useState({ dashboard: false })
-  const [msg, setMsg] = useState({ type: 'info', text: 'Open a module and start managing records.' })
+  const [msg, setMsg] = useState({ type: 'info', text: 'Chọn một module để bắt đầu quản lý dữ liệu.' })
   const [dialog, setDialog] = useState({ open: false, key: '', mode: 'create', record: null, values: {} })
 
   const mod = useMemo(() => (page === 'dashboard' ? null : modules[page]), [page])
@@ -162,7 +162,7 @@ function App() {
     flag('dashboard', true)
     try {
       setDashboard(await callApi('/api/reports/dashboard'))
-      notify('success', 'Dashboard refreshed.')
+      notify('success', 'Đã làm mới tổng quan.')
     } catch (e) {
       notify('error', e.message)
     } finally {
@@ -201,7 +201,7 @@ function App() {
 
   const login = async () => {
     if (!loginForm.username.trim() || !loginForm.password.trim()) {
-      notify('warning', 'Nhap username va password.')
+      notify('warning', 'Nhập tên đăng nhập và mật khẩu.')
       return
     }
 
@@ -217,15 +217,15 @@ function App() {
 
       const normalizedRole = String(user?.roleName ?? '').trim().toLowerCase()
       if (normalizedRole !== 'admin') {
-        notify('error', 'Tai khoan khong co quyen Admin.')
+        notify('error', 'Tài khoản không có quyền Admin.')
         return
       }
 
       setAuth(user)
       localStorage.setItem(AUTH_KEY, JSON.stringify(user))
-      notify('success', `Welcome ${user.fullName || user.username}`)
+      notify('success', `Chào mừng ${user.fullName || user.username}`)
     } catch (e) {
-      notify('error', `Dang nhap that bai: ${e.message}`)
+      notify('error', `Đăng nhập thất bại: ${e.message}`)
     } finally {
       setLoginLoading(false)
     }
@@ -235,7 +235,7 @@ function App() {
     setAuth(null)
     localStorage.removeItem(AUTH_KEY)
     setPage('dashboard')
-    notify('info', 'Da dang xuat.')
+    notify('info', 'Đã đăng xuất.')
   }
 
   const openForm = (mode, record = null) => {
@@ -264,7 +264,7 @@ function App() {
 
     try {
       await callApi(cfg.path(dialog.record), { method: cfg.method, body })
-      notify('success', 'Saved successfully.')
+      notify('success', 'Lưu thành công.')
       setDialog({ open: false, key: '', mode: 'create', record: null, values: {} })
       await Promise.all([loadModule(dialog.key), loadRefs()])
     } catch (e) {
@@ -274,10 +274,10 @@ function App() {
 
   const removeRow = async (row) => {
     if (!mod?.del) return
-    if (!window.confirm('Delete this record?')) return
+    if (!window.confirm('Bạn có chắc muốn xóa bản ghi này?')) return
     try {
       await callApi(mod.del.path(row), { method: mod.del.method })
-      notify('success', 'Deleted.')
+      notify('success', 'Đã xóa.')
       await Promise.all([loadModule(page), loadRefs()])
     } catch (e) {
       notify('error', e.message)
@@ -288,7 +288,7 @@ function App() {
     if (!mod?.toggle) return
     try {
       await callApi(mod.toggle.path(row), { method: mod.toggle.method, body: mod.toggle.body(row) })
-      notify('success', 'Status updated.')
+      notify('success', 'Đã cập nhật trạng thái.')
       await Promise.all([loadModule(page), loadRefs()])
     } catch (e) {
       notify('error', e.message)
@@ -299,26 +299,26 @@ function App() {
     try {
       if (kind === 'status') {
         const x = await callApi(`/api/subscriptions/${row.id}/status`)
-        notify('info', `Status: ${x.status}, active=${x.isActive}`)
+        notify('info', `Trạng thái: ${x.status}, kích hoạt=${x.isActive}`)
       }
       if (kind === 'extend') {
-        const raw = window.prompt('Extra days', '30')
+        const raw = window.prompt('Số ngày gia hạn thêm', '30')
         if (!raw) return
         const d = Number(raw)
         if (!Number.isFinite(d) || d <= 0) return
         await callApi(`/api/subscriptions/${row.id}/extend`, { method: 'POST', body: { extraDays: d } })
-        notify('success', 'Extended.')
+        notify('success', 'Đã gia hạn.')
       }
       if (kind === 'set') {
-        const s = window.prompt('Status value', row.status || 'Active')
+        const s = window.prompt('Giá trị trạng thái', row.status || 'Active')
         if (!s) return
         await callApi(`/api/subscriptions/${row.id}/status`, { method: 'PATCH', body: { status: s } })
-        notify('success', 'Status changed.')
+        notify('success', 'Đã đổi trạng thái.')
       }
       if (kind === 'cancel') {
-        if (!window.confirm(`Cancel subscription #${row.id}?`)) return
+        if (!window.confirm(`Bạn có chắc muốn hủy gói đăng ký #${row.id}?`)) return
         await callApi(`/api/subscriptions/${row.id}/cancel`, { method: 'PATCH' })
-        notify('success', 'Cancelled.')
+        notify('success', 'Đã hủy gói đăng ký.')
       }
       await Promise.all([loadModule('subscriptions'), loadRefs()])
     } catch (e) {
@@ -352,7 +352,7 @@ function App() {
             value={value ?? ''}
             onChange={(ev) => setDialog((p) => ({ ...p, values: { ...p.values, [name]: ev.target.value } }))}
           >
-            <option value="">Select</option>
+            <option value="">Chọn</option>
             {opts.map((o) => (
               <option key={`${name}-${o.value}`} value={o.value}>
                 {o.label}
@@ -389,23 +389,23 @@ function App() {
   }
 
   const cards = [
-    ['Active Members', dashboard?.activeMembers],
-    ['Active Packages', dashboard?.activePackages],
-    ['Active Subscriptions', dashboard?.activeSubscriptions],
-    ['Monthly Revenue', dashboard ? Number(dashboard.monthlyRevenue ?? 0).toLocaleString('vi-VN') : '-'],
-    ['Sessions Held', dashboard?.totalSessionsHeld],
-    ['Attendance Records', dashboard?.totalAttendanceRecords],
+    ['Hội viên đang hoạt động', dashboard?.activeMembers],
+    ['Gói tập đang hoạt động', dashboard?.activePackages],
+    ['Đăng ký gói đang hiệu lực', dashboard?.activeSubscriptions],
+    ['Doanh thu tháng', dashboard ? Number(dashboard.monthlyRevenue ?? 0).toLocaleString('vi-VN') : '-'],
+    ['Số buổi đã diễn ra', dashboard?.totalSessionsHeld],
+    ['Số bản ghi điểm danh', dashboard?.totalAttendanceRecords],
   ]
 
   if (!auth) {
     return (
       <div className="loginShell">
         <div className="loginCard">
-          <p className="kicker">Gym Admin</p>
-          <h1>Admin Sign In</h1>
-          <p className="loginHint">Dang nhap tai khoan co role Admin de vao trang quan tri.</p>
+          <p className="kicker">GYM ADMIN</p>
+          <h1>Đăng nhập quản trị</h1>
+          <p className="loginHint">Đăng nhập bằng tài khoản có vai trò Admin để vào trang quản trị.</p>
           <label className="field">
-            <span>Username</span>
+            <span>Tên đăng nhập</span>
             <input
               value={loginForm.username}
               onChange={(e) => setLoginForm((p) => ({ ...p, username: e.target.value }))}
@@ -413,7 +413,7 @@ function App() {
             />
           </label>
           <label className="field">
-            <span>Password</span>
+            <span>Mật khẩu</span>
             <input
               type="password"
               value={loginForm.password}
@@ -422,7 +422,7 @@ function App() {
             />
           </label>
           <button onClick={login} disabled={loginLoading}>
-            {loginLoading ? 'Signing in...' : 'Sign In'}
+            {loginLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
           <div className={`msg ${msg.type}`}>{msg.text}</div>
         </div>
@@ -434,8 +434,8 @@ function App() {
     <div className="admin">
       <aside className="side">
         <div className="brand">
-          <p>Gym Admin</p>
-          <h1>Control Panel</h1>
+          <p>GYM ADMIN</p>
+          <h1>Bảng điều khiển</h1>
         </div>
         <nav className="nav-menu">
           {navItems.map(([id, label]) => (
@@ -449,9 +449,9 @@ function App() {
       <main className="main">
         <header className="head">
           <div className="headText">
-            <span className="sectionTag">{page === 'dashboard' ? 'Overview' : 'Operations'}</span>
-            <h2>{page === 'dashboard' ? 'Dashboard' : mod?.title}</h2>
-            <p>{page === 'dashboard' ? 'Business overview' : 'Manage records with CRUD interface'}</p>
+            <span className="sectionTag">{page === 'dashboard' ? 'Tổng quan' : 'Quản trị'}</span>
+            <h2>{page === 'dashboard' ? 'Tổng quan' : mod?.title}</h2>
+            <p>{page === 'dashboard' ? 'Toàn cảnh hoạt động phòng gym' : 'Quản lý dữ liệu với thao tác CRUD'}</p>
           </div>
           <div className="headRight">
             <div className={`msg ${msg.type}`}>{msg.text}</div>
@@ -459,7 +459,7 @@ function App() {
               <strong>{auth.fullName || auth.username}</strong>
               <span>{auth.roleName}</span>
               <button className="ghost tiny" onClick={logout}>
-                Logout
+                Đăng xuất
               </button>
             </div>
           </div>
@@ -468,7 +468,7 @@ function App() {
         {page === 'dashboard' ? (
           <section className="panel">
             <div className="tools">
-              <button onClick={loadDashboard}>{loading.dashboard ? 'Loading...' : 'Refresh'}</button>
+              <button onClick={loadDashboard}>{loading.dashboard ? 'Đang tải...' : 'Làm mới'}</button>
             </div>
             <div className="stats">
               {cards.map(([k, v]) => (
@@ -479,21 +479,21 @@ function App() {
               ))}
             </div>
             <div className="tableWrap">
-              <h3>Expiring Subscriptions (7 days)</h3>
+              <h3>Gói đăng ký sắp hết hạn (7 ngày)</h3>
               <table>
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Member</th>
-                    <th>Package</th>
-                    <th>End</th>
-                    <th>Days</th>
+                    <th>Hội viên</th>
+                    <th>Gói tập</th>
+                    <th>Hết hạn</th>
+                    <th>Còn lại (ngày)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(dashboard?.expiringSubscriptions ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={5}>No data</td>
+                      <td colSpan={5}>Không có dữ liệu</td>
                     </tr>
                   ) : (
                     dashboard.expiringSubscriptions.map((x) => (
@@ -514,9 +514,9 @@ function App() {
           <section className="panel">
             <div className="tools">
               <div className="leftTools">
-                {mod?.create ? <button onClick={() => openForm('create')}>+ New</button> : null}
+                {mod?.create ? <button onClick={() => openForm('create')}>+ Thêm mới</button> : null}
                 <button className="ghost" onClick={() => loadModule(page)}>
-                  {loading[page] ? 'Loading...' : 'Refresh'}
+                  {loading[page] ? 'Đang tải...' : 'Làm mới'}
                 </button>
               </div>
               {(mod?.filters ?? []).length > 0 ? (
@@ -534,7 +534,7 @@ function App() {
                               setFilters((p) => ({ ...p, [page]: { ...p[page], [f.key]: ev.target.value } }))
                             }
                           >
-                            <option value="">All</option>
+                            <option value="">Tất cả</option>
                             {opts.map((o) => (
                               <option key={`${f.key}-${o.value}`} value={o.value}>
                                 {o.label}
@@ -555,7 +555,7 @@ function App() {
                     )
                   })}
                   <button className="ghost" onClick={() => loadModule(page)}>
-                    Apply
+                    Áp dụng
                   </button>
                 </div>
               ) : null}
@@ -568,13 +568,13 @@ function App() {
                     {mod?.cols.map((c) => (
                       <th key={c}>{fieldMeta(c).label}</th>
                     ))}
-                    <th>Actions</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(data[page] ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={(mod?.cols.length ?? 0) + 1}>No records</td>
+                      <td colSpan={(mod?.cols.length ?? 0) + 1}>Không có dữ liệu</td>
                     </tr>
                   ) : (
                     (data[page] ?? []).map((r) => (
@@ -585,33 +585,33 @@ function App() {
                         <td className="actions">
                           {mod.update ? (
                             <button className="tiny" onClick={() => openForm('update', r)}>
-                              Edit
+                              Sửa
                             </button>
                           ) : null}
                           {mod.toggle ? (
                             <button className="tiny ghost" onClick={() => toggleRow(r)}>
-                              Toggle
+                              Bật/Tắt
                             </button>
                           ) : null}
                           {page === 'subscriptions' ? (
                             <>
                               <button className="tiny ghost" onClick={() => subAction('status', r)}>
-                                Status
+                                Trạng thái
                               </button>
                               <button className="tiny ghost" onClick={() => subAction('extend', r)}>
-                                Extend
+                                Gia hạn
                               </button>
                               <button className="tiny ghost" onClick={() => subAction('set', r)}>
-                                Set
+                                Gán
                               </button>
                               <button className="tiny ghost" onClick={() => subAction('cancel', r)}>
-                                Cancel
+                                Hủy
                               </button>
                             </>
                           ) : null}
                           {mod.del ? (
                             <button className="tiny danger" onClick={() => removeRow(r)}>
-                              Delete
+                              Xóa
                             </button>
                           ) : null}
                         </td>
@@ -629,9 +629,9 @@ function App() {
         <div className="modalBg" onClick={() => setDialog((p) => ({ ...p, open: false }))}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <header>
-              <h3>{dialog.mode === 'create' ? 'Create Record' : 'Edit Record'}</h3>
+              <h3>{dialog.mode === 'create' ? 'Tạo bản ghi' : 'Chỉnh sửa bản ghi'}</h3>
               <button className="ghost" onClick={() => setDialog((p) => ({ ...p, open: false }))}>
-                Close
+                Đóng
               </button>
             </header>
             <form
@@ -647,9 +647,9 @@ function App() {
               </div>
               <div className="formActions">
                 <button type="button" className="ghost" onClick={() => setDialog((p) => ({ ...p, open: false }))}>
-                  Cancel
+                  Hủy
                 </button>
-                <button type="submit">Save</button>
+                <button type="submit">Lưu</button>
               </div>
             </form>
           </div>

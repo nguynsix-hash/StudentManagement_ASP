@@ -143,6 +143,24 @@ public class MembersController : ControllerBase
             return NotFound();
         }
 
+        var hasSubscriptions = await _context.Subscriptions.AnyAsync(s => s.MemberId == id);
+        if (hasSubscriptions)
+        {
+            return BadRequest(new { message = "Cannot delete member because it has subscriptions." });
+        }
+
+        var hasAttendances = await _context.Attendances.AnyAsync(a => a.MemberId == id);
+        if (hasAttendances)
+        {
+            return BadRequest(new { message = "Cannot delete member because it has attendance records." });
+        }
+
+        var hasSchedules = await _context.Schedules.AnyAsync(s => s.MemberId == id);
+        if (hasSchedules)
+        {
+            return BadRequest(new { message = "Cannot delete member because it is assigned to schedules." });
+        }
+
         _context.Members.Remove(member);
         await _context.SaveChangesAsync();
         return NoContent();

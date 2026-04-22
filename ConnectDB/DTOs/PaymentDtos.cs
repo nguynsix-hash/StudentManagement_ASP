@@ -8,14 +8,16 @@ public class PaymentCreateDto
     public int SubscriptionId { get; set; }
 
     [Range(0.01, double.MaxValue)]
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     public DateTime? PaymentDate { get; set; }
 
     [StringLength(30)]
+    [RegularExpression("^(Cash|Card|Transfer|E-Wallet)$", ErrorMessage = "PaymentMethod must be Cash, Card, Transfer, or E-Wallet.")]
     public string PaymentMethod { get; set; } = "Cash";
 
     [StringLength(20)]
+    [RegularExpression("^(Paid|Pending|Refunded|Cancelled)$", ErrorMessage = "Status must be Paid, Pending, Refunded, or Cancelled.")]
     public string Status { get; set; } = "Paid";
 
     [StringLength(500)]
@@ -30,9 +32,11 @@ public class PaymentUpdateDto
     public DateTime PaymentDate { get; set; }
 
     [StringLength(30)]
+    [RegularExpression("^(Cash|Card|Transfer|E-Wallet)$", ErrorMessage = "PaymentMethod must be Cash, Card, Transfer, or E-Wallet.")]
     public string PaymentMethod { get; set; } = "Cash";
 
     [StringLength(20)]
+    [RegularExpression("^(Paid|Pending|Refunded|Cancelled)$", ErrorMessage = "Status must be Paid, Pending, Refunded, or Cancelled.")]
     public string Status { get; set; } = "Paid";
 
     [StringLength(500)]

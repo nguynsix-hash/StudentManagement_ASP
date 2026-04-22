@@ -18,6 +18,7 @@ public class TrainerCreateDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 }
@@ -38,6 +39,7 @@ public class TrainerUpdateDto
     [StringLength(15)]
     public string? Phone { get; set; }
 
+    [EmailAddress]
     [StringLength(100)]
     public string? Email { get; set; }
 
