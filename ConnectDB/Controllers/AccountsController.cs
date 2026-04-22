@@ -1,20 +1,28 @@
 using ConnectDB.Data;
 using ConnectDB.DTOs;
 using ConnectDB.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace ConnectDB.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class AccountsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IConfiguration _configuration;
 
-    public AccountsController(AppDbContext context)
+    public AccountsController(AppDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     [HttpGet]
@@ -45,6 +53,7 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     public async Task<ActionResult<AccountResponseDto>> Register(AccountRegisterDto dto)
     {
         var username = dto.Username.Trim();
@@ -92,7 +101,8 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<AccountResponseDto>> Login(AccountLoginDto dto)
+    [AllowAnonymous]
+    public async Task<ActionResult<AccountLoginResponseDto>> Login(AccountLoginDto dto)
     {
         var username = dto.Username.Trim();
         var account = await _context.Accounts
@@ -112,7 +122,16 @@ public class AccountsController : ControllerBase
             await _context.SaveChangesAsync();
         }
 
-        return Ok(MapToResponse(account));
+        var accountResponse = MapToResponse(account);
+        var expiresAt = DateTime.UtcNow.AddHours(8);
+        var token = GenerateJwtToken(accountResponse, expiresAt);
+
+        return Ok(new AccountLoginResponseDto
+        {
+            Token = token,
+            ExpiresAt = expiresAt,
+            Account = accountResponse
+        });
     }
 
     [HttpPut("{id}")]
@@ -199,5 +218,36 @@ public class AccountsController : ControllerBase
     private static bool IsBcryptHash(string password)
     {
         return password.StartsWith("$2a$") || password.StartsWith("$2b$") || password.StartsWith("$2y$");
+    }
+
+    private string GenerateJwtToken(AccountResponseDto account, DateTime expiresAtUtc)
+    {
+        var jwtSection = _configuration.GetSection("Jwt");
+        var key = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+        var issuer = jwtSection["Issuer"] ?? "GymManagementApi";
+        var audience = jwtSection["Audience"] ?? "GymManagementAdmin";
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, account.Id.ToString()),
+            new(JwtRegisteredClaimNames.UniqueName, account.Username),
+            new(ClaimTypes.NameIdentifier, account.Id.ToString()),
+            new(ClaimTypes.Name, account.Username),
+            new(ClaimTypes.Role, account.RoleName),
+            new("fullName", account.FullName),
+            new("roleId", account.RoleId.ToString())
+        };
+
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: expiresAtUtc,
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

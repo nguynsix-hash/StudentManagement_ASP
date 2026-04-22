@@ -1,6 +1,7 @@
 using ConnectDB.Data;
 using ConnectDB.DTOs;
 using ConnectDB.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace ConnectDB.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class MembersController : ControllerBase
 {
     private readonly AppDbContext _context;

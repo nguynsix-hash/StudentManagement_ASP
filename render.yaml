@@ -10,3 +10,19 @@ services:
         value: "true"
       - key: ASPNETCORE_ENVIRONMENT
         value: "Production"
+
+  - type: web
+    name: gym-management-frontend
+    runtime: static
+    region: singapore
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://gym-management-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

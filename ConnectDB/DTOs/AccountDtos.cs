@@ -80,3 +80,10 @@ public class AccountResponseDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+public class AccountLoginResponseDto
+{
+    public string Token { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+    public AccountResponseDto Account { get; set; } = new();
+}

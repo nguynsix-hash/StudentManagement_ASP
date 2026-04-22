@@ -3,18 +3,74 @@ import { fieldMeta, modules, navItems } from './modules'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
-const AUTH_USER_KEY = 'gym_admin_user'
+const AUTH_STORAGE_KEY = 'gym_admin_auth'
+const AUTH_LEGACY_USER_KEY = 'gym_admin_user'
+const AUTH_EXPIRED_EVENT = 'gym-auth-expired'
 
 function api(path) {
   return `${API_BASE}${path}`
 }
 
-async function callApi(path, { method = 'GET', body } = {}) {
+function readStoredAuth() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY)
+    if (!raw) {
+      localStorage.removeItem(AUTH_LEGACY_USER_KEY)
+      return null
+    }
+
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    if (typeof parsed.token !== 'string' || !parsed.token.trim()) return null
+    if (!parsed.account || typeof parsed.account !== 'object') return null
+
+    const normalized = {
+      token: parsed.token,
+      expiresAt: parsed.expiresAt ?? null,
+      account: parsed.account,
+    }
+
+    if (normalized.expiresAt) {
+      const exp = new Date(normalized.expiresAt).getTime()
+      if (Number.isFinite(exp) && Date.now() >= exp) {
+        clearStoredAuth()
+        return null
+      }
+    }
+
+    return normalized
+  } catch {
+    return null
+  }
+}
+
+function writeStoredAuth(authPayload) {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authPayload))
+  localStorage.removeItem(AUTH_LEGACY_USER_KEY)
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem(AUTH_STORAGE_KEY)
+  localStorage.removeItem(AUTH_LEGACY_USER_KEY)
+}
+
+function getStoredToken() {
+  return readStoredAuth()?.token ?? ''
+}
+
+async function callApi(path, { method = 'GET', body, skipAuthHandling = false } = {}) {
+  const token = getStoredToken()
+  const shouldSendAuth =
+    Boolean(token) &&
+    path !== '/api/accounts/login' &&
+    path !== '/api/accounts/register'
+
   const res = await fetch(api(path), {
     method,
     headers: {
       Accept: 'application/json',
       ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(shouldSendAuth ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   })
@@ -41,7 +97,20 @@ async function callApi(path, { method = 'GET', body } = {}) {
         msg = data.title
       }
     }
-    throw new Error(msg)
+
+    const error = new Error(msg)
+    error.status = res.status
+
+    if (
+      res.status === 401 &&
+      !skipAuthHandling &&
+      path !== '/api/accounts/login' &&
+      path !== '/api/accounts/register'
+    ) {
+      window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT))
+    }
+
+    throw error
   }
 
   return data
@@ -125,21 +194,8 @@ function asItems(res) {
   return []
 }
 
-function readStoredUser() {
-  try {
-    const raw = localStorage.getItem(AUTH_USER_KEY)
-    if (!raw) return null
-    const user = JSON.parse(raw)
-    if (!user || typeof user !== 'object') return null
-    return user
-  } catch {
-    return null
-  }
-}
-
-
 function App() {
-  const [auth, setAuth] = useState(readStoredUser)
+  const [auth, setAuth] = useState(readStoredAuth)
   const [loginForm, setLoginForm] = useState({ username: 'admin', password: '123456' })
   const [loginLoading, setLoginLoading] = useState(false)
   const [page, setPage] = useState('dashboard')
@@ -159,6 +215,19 @@ function App() {
   })
 
   const mod = useMemo(() => (page === 'dashboard' ? null : modules[page]), [page])
+  const currentUser = auth?.account ?? null
+
+  useEffect(() => {
+    const onAuthExpired = () => {
+      clearStoredAuth()
+      setAuth(null)
+      setPage('dashboard')
+      setMsg({ type: 'error', text: 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.' })
+    }
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired)
+  }, [])
 
   const optionsFrom = useCallback(
     (src, { activeOnly = false } = {}) => {
@@ -241,13 +310,13 @@ function App() {
   )
 
   useEffect(() => {
-    if (!auth) return
+    if (!auth?.token) return
     loadRefs()
     loadDashboard()
   }, [auth, loadRefs, loadDashboard])
 
   useEffect(() => {
-    if (!auth) return
+    if (!auth?.token) return
     if (page === 'dashboard') return
     loadModule(page)
   }, [auth, page, loadModule])
@@ -259,6 +328,8 @@ function App() {
 
     setLoginLoading(true)
     try {
+      clearStoredAuth()
+
       const loginRes = await callApi('/api/accounts/login', {
         method: 'POST',
         body: {
@@ -267,19 +338,31 @@ function App() {
         },
       })
 
-      const user = loginRes?.account ?? loginRes
+      const token = loginRes?.token
+      const user = loginRes?.account
+      if (typeof token !== 'string' || !token.trim()) {
+        notify('error', 'Phan hoi dang nhap khong co token hop le.')
+        return
+      }
+      if (!user || typeof user !== 'object') {
+        notify('error', 'Phan hoi dang nhap khong hop le.')
+        return
+      }
+
       const normalizedRole = String(user?.roleName ?? '').trim().toLowerCase()
       if (normalizedRole !== 'admin') {
         notify('error', 'Tai khoan khong co quyen Admin.')
         return
       }
-      if (!user) {
-        notify('error', 'Phan hoi dang nhap khong hop le.')
-        return
+
+      const authPayload = {
+        token,
+        expiresAt: loginRes?.expiresAt ?? null,
+        account: user,
       }
 
-      setAuth(user)
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
+      setAuth(authPayload)
+      writeStoredAuth(authPayload)
       notify('success', `Chao mung ${user.fullName || user.username}`)
     } catch (e) {
       notify('error', `Dang nhap that bai: ${e.message}`)
@@ -289,7 +372,7 @@ function App() {
   }
   const logout = () => {
     setAuth(null)
-    localStorage.removeItem(AUTH_USER_KEY)
+    clearStoredAuth()
     setPage('dashboard')
     notify('info', 'Đã đăng xuất.')
   }
@@ -533,7 +616,7 @@ function App() {
     ['Số bản ghi điểm danh', dashboard?.totalAttendanceRecords],
   ]
 
-  if (!auth) {
+  if (!auth?.token || !currentUser) {
     return (
       <div className="loginShell">
         <div className="loginCard">
@@ -592,8 +675,8 @@ function App() {
           <div className="headRight">
             <div className={`msg ${msg.type}`}>{msg.text}</div>
             <div className="userBox">
-              <strong>{auth?.fullName || auth?.username}</strong>
-              <span>{auth?.roleName}</span>
+              <strong>{currentUser.fullName || currentUser.username}</strong>
+              <span>{currentUser.roleName}</span>
               <button className="ghost tiny" onClick={logout}>
                 Đăng xuất
               </button>
