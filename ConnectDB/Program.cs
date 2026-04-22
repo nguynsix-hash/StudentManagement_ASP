@@ -124,7 +124,10 @@ public class Program
         app.UseSwaggerUI();
 
         app.UseCors();
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsProduction())
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();

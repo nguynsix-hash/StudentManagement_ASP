@@ -14,8 +14,9 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV USE_INMEMORY_DB=true
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
 
-ENTRYPOINT ["dotnet", "ConnectDB.dll"]
+ENTRYPOINT ["sh", "-c", "dotnet ConnectDB.dll --urls http://0.0.0.0:${PORT:-8080}"]
