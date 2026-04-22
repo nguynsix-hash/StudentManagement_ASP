@@ -196,7 +196,7 @@ function asItems(res) {
 
 function App() {
   const [auth, setAuth] = useState(readStoredAuth)
-  const [loginForm, setLoginForm] = useState({ username: 'admin', password: '123456' })
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' })
   const [loginLoading, setLoginLoading] = useState(false)
   const [page, setPage] = useState('dashboard')
   const [dashboard, setDashboard] = useState(null)
@@ -628,7 +628,8 @@ function App() {
             <input
               value={loginForm.username}
               onChange={(e) => setLoginForm((p) => ({ ...p, username: e.target.value }))}
-              placeholder="admin"
+              placeholder="Nháº­p tÃªn Ä‘Äƒng nháº­p"
+              autoComplete="off"
             />
           </label>
           <label className="field">
@@ -637,7 +638,8 @@ function App() {
               type="password"
               value={loginForm.password}
               onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
-              placeholder="******"
+              placeholder="Nháº­p máº­t kháº©u"
+              autoComplete="new-password"
             />
           </label>
           <button onClick={login} disabled={loginLoading}>
